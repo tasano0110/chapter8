@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { Post } from "../types/Post";
 
 interface PostDetailProps {
@@ -17,10 +18,17 @@ export default function PostDetail({ id }: PostDetailProps): React.JSX.Element {
 
       try {
         const res = await fetch(
-          `https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts/${id}`
+          `https://fo3lraotxc.microcms.io/api/v1/posts/${id}`,
+          {
+            headers: {
+              "X-MICROCMS-API-KEY":
+                process.env.NEXT_PUBLIC_MICROCMS_API_KEY || "",
+            },
+          }
         );
         const response = await res.json();
-        setPost(response.post);
+        console.log("Post Detail API Response:", response); // デバッグ用
+        setPost(response);
       } catch (error) {
         console.error("Failed to fetch post:", error);
       } finally {
@@ -61,6 +69,19 @@ export default function PostDetail({ id }: PostDetailProps): React.JSX.Element {
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto py-10 px-10">
         <article className="bg-white border border-gray-300 p-8">
+          {/* サムネイル画像 */}
+          {post.thumbnail && (
+            <div className="mb-8">
+              <Image
+                src={post.thumbnail.url}
+                alt={post.title}
+                width={post.thumbnail.width}
+                height={post.thumbnail.height}
+                className="w-full h-64 object-cover rounded"
+              />
+            </div>
+          )}
+
           {/* メタ情報 */}
           <div className="flex justify-between items-center mb-8">
             <time className="text-gray-500 text-sm">
@@ -68,12 +89,12 @@ export default function PostDetail({ id }: PostDetailProps): React.JSX.Element {
             </time>
             <div className="flex gap-2.5">
               {(post.categories || []).map(
-                (category: string, index: number) => (
+                (category: { id: string; name: string }) => (
                   <span
-                    key={index}
+                    key={category.id}
                     className="px-3 py-1 rounded text-sm bg-gray-500 text-white font-medium tracking-wide"
                   >
-                    {category}
+                    {category.name}
                   </span>
                 )
               )}

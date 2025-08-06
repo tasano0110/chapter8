@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Post } from "../types/Post";
 
 type ApiResponse = {
-  posts: Post[];
+  contents: Post[];
 };
 
 export default function BlogApp(): React.JSX.Element {
@@ -15,11 +15,15 @@ export default function BlogApp(): React.JSX.Element {
   useEffect(() => {
     const fetchPosts = async (): Promise<void> => {
       try {
-        const res = await fetch(
-          "https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts"
-        );
+        const res = await fetch("https://fo3lraotxc.microcms.io/api/v1/posts", {
+          headers: {
+            "X-MICROCMS-API-KEY":
+              process.env.NEXT_PUBLIC_MICROCMS_API_KEY || "",
+          },
+        });
         const data = (await res.json()) as ApiResponse;
-        setPosts(data.posts);
+        console.log("API Response:", data); // デバッグ用
+        setPosts(data.contents);
       } catch (err) {
         // エラーが発生した場合は空の配列のままにする
         setPosts([]);
@@ -74,12 +78,15 @@ export default function BlogApp(): React.JSX.Element {
                   </time>
                   <div className="flex gap-2.5">
                     {(post.categories || []).map(
-                      (category: string, index: number) => (
+                      (
+                        category: { id: string; name: string },
+                        index: number
+                      ) => (
                         <span
                           key={index}
                           className="px-2 py-1 rounded text-xs bg-gray-500 text-white font-medium tracking-wide"
                         >
-                          {category}
+                          {category.name}
                         </span>
                       )
                     )}
