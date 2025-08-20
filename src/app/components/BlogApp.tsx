@@ -4,8 +4,13 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Post } from "../types/Post";
 
-type ApiResponse = {
-  contents: Post[];
+type LocalCategory = string | { id: number | string; name: string };
+type LocalPost = {
+  id: number;
+  title: string;
+  content: string;
+  createdAt: string;
+  categories: LocalCategory[];
 };
 
 export default function BlogApp(): React.JSX.Element {
@@ -15,15 +20,20 @@ export default function BlogApp(): React.JSX.Element {
   useEffect(() => {
     const fetchPosts = async (): Promise<void> => {
       try {
-        const res = await fetch("https://fo3lraotxc.microcms.io/api/v1/posts", {
-          headers: {
-            "X-MICROCMS-API-KEY":
-              process.env.NEXT_PUBLIC_MICROCMS_API_KEY || "",
-          },
-        });
-        const data = (await res.json()) as ApiResponse;
-        console.log("API Response:", data); // デバッグ用
-        setPosts(data.contents);
+        const res = await fetch("/api/posts");
+        const data = (await res.json()) as LocalPost[];
+        const normalized: Post[] = (data || []).map((p) => ({
+          id: String(p.id),
+          title: p.title,
+          content: p.content,
+          createdAt: p.createdAt,
+          categories: (p.categories || []).map((c) =>
+            typeof c === "string"
+              ? { id: c, name: c }
+              : { id: String(c.id), name: c.name }
+          ),
+        }));
+        setPosts(normalized);
       } catch (err) {
         // エラーが発生した場合は空の配列のままにする
         setPosts([]);

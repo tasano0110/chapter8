@@ -17,18 +17,20 @@ export default function PostDetail({ id }: PostDetailProps): React.JSX.Element {
       if (!id) return;
 
       try {
-        const res = await fetch(
-          `https://fo3lraotxc.microcms.io/api/v1/posts/${id}`,
-          {
-            headers: {
-              "X-MICROCMS-API-KEY":
-                process.env.NEXT_PUBLIC_MICROCMS_API_KEY || "",
-            },
-          }
-        );
-        const response = await res.json();
-        console.log("Post Detail API Response:", response); // デバッグ用
-        setPost(response);
+        const res = await fetch(`/api/posts/${id}`);
+        const data = await res.json();
+        const normalized: Post = {
+          id: String(data.id),
+          title: data.title,
+          content: data.content,
+          createdAt: data.createdAt,
+          categories: (data.categories || []).map((c: any) =>
+            typeof c === "string"
+              ? { id: c, name: c }
+              : { id: String(c.id), name: c.name }
+          ),
+        };
+        setPost(normalized);
       } catch (error) {
         console.error("Failed to fetch post:", error);
       } finally {
