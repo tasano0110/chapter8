@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import AdminLayout from '../../../components/AdminLayout'
+import CategoryForm from '../../posts/_components/CategoryForm'
 
 interface Category {
   id: number
@@ -14,7 +15,7 @@ export default function CategoryEditPage() {
   const params = useParams()
   const categoryId = params.id as string
 
-  const [name, setName] = useState('')
+  const [initialData, setInitialData] = useState<{ name: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -25,7 +26,7 @@ export default function CategoryEditPage() {
         const response = await fetch(`/api/admin/categories/${categoryId}`)
         if (response.ok) {
           const categoryData: Category = await response.json()
-          setName(categoryData.name)
+          setInitialData({ name: categoryData.name })
         } else {
           setMessage('カテゴリーの取得に失敗しました')
         }
@@ -42,14 +43,7 @@ export default function CategoryEditPage() {
     }
   }, [categoryId])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!name.trim()) {
-      setMessage('カテゴリー名は必須です')
-      return
-    }
-
+  const handleSubmit = async (data: { name: string }) => {
     setLoading(true)
     setMessage('')
 
@@ -59,9 +53,7 @@ export default function CategoryEditPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: name.trim(),
-        }),
+        body: JSON.stringify(data),
       })
 
       if (response.ok) {
@@ -79,10 +71,6 @@ export default function CategoryEditPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('本当にこのカテゴリーを削除しますか？')) {
-      return
-    }
-
     setLoading(true)
     setMessage('')
 
@@ -118,60 +106,15 @@ export default function CategoryEditPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">カテゴリー編集</h1>
-
-        {message && (
-          <div className={`mb-4 p-3 rounded ${
-            message.includes('更新しました') || message.includes('削除しました')
-              ? 'bg-green-100 text-green-700' 
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {message}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              カテゴリー名 *
-            </label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? '保存中...' : '保存'}
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={loading}
-              className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-            >
-              削除
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/admin/categories')}
-              className="px-6 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-            >
-              戻る
-            </button>
-          </div>
-        </form>
-      </div>
+      <CategoryForm
+        mode="edit"
+        categoryId={categoryId}
+        initialData={initialData || undefined}
+        onSubmit={handleSubmit}
+        onDelete={handleDelete}
+        loading={loading}
+        message={message}
+      />
     </AdminLayout>
   )
 }
