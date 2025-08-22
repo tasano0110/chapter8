@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import AdminLayout from '../../../components/AdminLayout'
-import CategoryForm from '../../posts/_components/CategoryForm'
+import CategoryForm from '../_components/CategoryForm'
 
 interface Category {
   id: number

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminLayout from '../../../components/AdminLayout'
-import CategoryForm from '../../posts/_components/CategoryForm'
+import CategoryForm from '../_components/CategoryForm'
 
 export default function CategoryCreatePage() {
   const router = useRouter()
