@@ -4,8 +4,13 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Post } from "../types/Post";
 
-type ApiResponse = {
-  posts: Post[];
+type LocalCategory = string | { id: number | string; name: string };
+type LocalPost = {
+  id: number;
+  title: string;
+  content: string;
+  createdAt: string;
+  categories: LocalCategory[];
 };
 
 export default function BlogApp(): React.JSX.Element {
@@ -15,11 +20,20 @@ export default function BlogApp(): React.JSX.Element {
   useEffect(() => {
     const fetchPosts = async (): Promise<void> => {
       try {
-        const res = await fetch(
-          "https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts"
-        );
-        const data = (await res.json()) as ApiResponse;
-        setPosts(data.posts);
+        const res = await fetch("/api/posts");
+        const data = (await res.json()) as LocalPost[];
+        const normalized: Post[] = (data || []).map((p) => ({
+          id: String(p.id),
+          title: p.title,
+          content: p.content,
+          createdAt: p.createdAt,
+          categories: (p.categories || []).map((c) =>
+            typeof c === "string"
+              ? { id: c, name: c }
+              : { id: String(c.id), name: c.name }
+          ),
+        }));
+        setPosts(normalized);
       } catch (err) {
         // エラーが発生した場合は空の配列のままにする
         setPosts([]);
@@ -74,12 +88,15 @@ export default function BlogApp(): React.JSX.Element {
                   </time>
                   <div className="flex gap-2.5">
                     {(post.categories || []).map(
-                      (category: string, index: number) => (
+                      (
+                        category: { id: string; name: string },
+                        index: number
+                      ) => (
                         <span
                           key={index}
                           className="px-2 py-1 rounded text-xs bg-gray-500 text-white font-medium tracking-wide"
                         >
-                          {category}
+                          {category.name}
                         </span>
                       )
                     )}
