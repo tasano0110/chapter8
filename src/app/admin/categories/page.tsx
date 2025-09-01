@@ -1,48 +1,53 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import AdminLayout from '../../components/AdminLayout'
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useSupabaseSession } from "../../_hooks/useSupabaseSession";
+// AdminLayout is provided by app/admin/layout.tsx
 
 interface Category {
-  id: number
-  name: string
-  createdAt: string
-  updatedAt: string
+  id: number;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function CategoriesAdminPage() {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { token } = useSupabaseSession();
 
   useEffect(() => {
+    if (!token) return;
+
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/admin/categories')
+        const response = await fetch("/api/admin/categories", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });
         if (response.ok) {
-          const data = await response.json()
-          setCategories(data)
+          const data = await response.json();
+          setCategories(data);
         }
       } catch (error) {
-        console.error('カテゴリの取得に失敗しました:', error)
+        console.error("カテゴリの取得に失敗しました:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchCategories()
-  }, [])
+    fetchCategories();
+  }, [token]);
 
   if (loading) {
-    return (
-      <AdminLayout>
-        <div>読み込み中...</div>
-      </AdminLayout>
-    )
+    return <div>読み込み中...</div>;
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">カテゴリー一覧</h1>
         <Link
@@ -67,9 +72,12 @@ export default function CategoriesAdminPage() {
                 className="block px-6 py-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">{category.name}</h3>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {category.name}
+                  </h3>
                   <div className="text-sm text-gray-500">
-                    作成日: {new Date(category.createdAt).toLocaleDateString('ja-JP')}
+                    作成日:{" "}
+                    {new Date(category.createdAt).toLocaleDateString("ja-JP")}
                   </div>
                 </div>
               </Link>
@@ -77,6 +85,6 @@ export default function CategoriesAdminPage() {
           </div>
         )}
       </div>
-    </AdminLayout>
-  )
+    </>
+  );
 }

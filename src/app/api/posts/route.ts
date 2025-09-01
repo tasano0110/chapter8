@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const posts = await prisma.post.findMany({
     orderBy: {
       createdAt: "desc",
@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     title: post.title,
     content: post.content,
     createdAt: post.createdAt,
+    thumbnailImageKey: post.thumbnailImageKey,
     categories: post.postCategories.map((pc) => pc.category.name),
   }));
 

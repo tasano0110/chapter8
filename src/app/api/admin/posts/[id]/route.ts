@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { supabase } from "@/utils/supabase";
 
 const prisma = new PrismaClient();
 
@@ -10,6 +11,11 @@ type Params = {
 };
 
 export async function GET(request: NextRequest, { params }: Params) {
+  const token = request.headers.get("Authorization") ?? "";
+  const { error } = await supabase.auth.getUser(token);
+  if (error) {
+    return NextResponse.json({ status: error.message }, { status: 400 });
+  }
   const id = parseInt(params.id);
   const post = await prisma.post.findUnique({
     where: { id: id },
@@ -29,7 +35,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     id: post.id,
     title: post.title,
     content: post.content,
-    thumbnailUrl: post.thumbnailUrl,
+    thumbnailImageKey: post.thumbnailImageKey,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     categories: post.postCategories.map((pc) => ({
@@ -41,6 +47,11 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const token = request.headers.get("Authorization") ?? "";
+  const { error } = await supabase.auth.getUser(token);
+  if (error) {
+    return NextResponse.json({ status: error.message }, { status: 400 });
+  }
   const id = parseInt(params.id);
   const body = await request.json();
 
@@ -65,7 +76,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     data: {
       title: body.title,
       content: body.content,
-      thumbnailUrl: body.thumbnailUrl || "",
+      thumbnailImageKey: body.thumbnailImageKey || "",
       postCategories:
         categoryIds.length > 0
           ? {
@@ -86,7 +97,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     id: updatedPost.id,
     title: updatedPost.title,
     content: updatedPost.content,
-    thumbnailUrl: updatedPost.thumbnailUrl,
+    thumbnailImageKey: updatedPost.thumbnailImageKey,
     createdAt: updatedPost.createdAt,
     updatedAt: updatedPost.updatedAt,
     categories: updatedPost.postCategories.map((pc) => ({
@@ -99,7 +110,25 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(request: NextRequest, { params }: Params) {
+  const token = request.headers.get("Authorization") ?? "";
+  const { error } = await supabase.auth.getUser(token);
+  if (error) {
+    return NextResponse.json({ status: error.message }, { status: 400 });
+  }
   const id = parseInt(params.id);
+  
+  // 記事を取得してサムネイル画像のキーを確認
+  const post = await prisma.post.findUnique({
+    where: { id: id },
+  });
+
+  if (post && post.thumbnailImageKey) {
+    // Supabaseから画像を削除
+    await supabase.storage
+      .from('post_thumbnail')
+      .remove([post.thumbnailImageKey]);
+  }
+
   const deletedPost = await prisma.post.delete({
     where: {
       id: id,

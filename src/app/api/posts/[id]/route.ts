@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     id: post.id,
     title: post.title,
     content: post.content,
-    thumbnailUrl: post.thumbnailUrl,
+    thumbnailImageKey: post.thumbnailImageKey,
     createdAt: post.createdAt,
     categories: post.postCategories.map((pc) => pc.category.name),
   };

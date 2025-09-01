@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import { Post } from "../types/Post";
+import ThumbnailImage from "../_components/ThumbnailImage";
 
 interface PostDetailProps {
   id: string;
@@ -24,6 +24,7 @@ export default function PostDetail({ id }: PostDetailProps): React.JSX.Element {
           title: data.title,
           content: data.content,
           createdAt: data.createdAt,
+          thumbnailImageKey: data.thumbnailImageKey,
           categories: (data.categories || []).map((c: any) =>
             typeof c === "string"
               ? { id: c, name: c }
@@ -72,13 +73,13 @@ export default function PostDetail({ id }: PostDetailProps): React.JSX.Element {
       <main className="max-w-4xl mx-auto py-10 px-10">
         <article className="bg-white border border-gray-300 p-8">
           {/* サムネイル画像 */}
-          {post.thumbnail && (
+          {post.thumbnailImageKey && (
             <div className="mb-8">
-              <Image
-                src={post.thumbnail.url}
+              <ThumbnailImage
+                thumbnailImageKey={post.thumbnailImageKey}
                 alt={post.title}
-                width={post.thumbnail.width}
-                height={post.thumbnail.height}
+                width={800}
+                height={400}
                 className="w-full h-64 object-cover rounded"
               />
             </div>
