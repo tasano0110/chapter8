@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Post } from "../types/Post";
+import ThumbnailImage from "../_components/ThumbnailImage";
 
 type LocalCategory = string | { id: number | string; name: string };
 type LocalPost = {
@@ -10,6 +11,7 @@ type LocalPost = {
   title: string;
   content: string;
   createdAt: string;
+  thumbnailImageKey?: string;
   categories: LocalCategory[];
 };
 
@@ -27,6 +29,7 @@ export default function BlogApp(): React.JSX.Element {
           title: p.title,
           content: p.content,
           createdAt: p.createdAt,
+          thumbnailImageKey: p.thumbnailImageKey,
           categories: (p.categories || []).map((c) =>
             typeof c === "string"
               ? { id: c, name: c }
@@ -81,6 +84,18 @@ export default function BlogApp(): React.JSX.Element {
                 key={post.id}
                 className="w-3/5 mx-auto bg-white border border-gray-300 p-5 block no-underline text-gray-900 hover:shadow-lg transition-shadow"
               >
+                {/* サムネイル画像 */}
+                {post.thumbnailImageKey && (
+                  <div className="mb-4">
+                    <ThumbnailImage
+                      thumbnailImageKey={post.thumbnailImageKey}
+                      alt={post.title}
+                      width={600}
+                      height={300}
+                      className="w-full h-48 object-cover rounded"
+                    />
+                  </div>
+                )}
                 {/* メタ情報（日付とカテゴリ） */}
                 <div className="flex justify-between items-center mb-5">
                   <time className="text-gray-500 text-xs">

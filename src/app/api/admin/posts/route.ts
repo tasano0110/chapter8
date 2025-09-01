@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { supabase } from "@/utils/supabase";
 
 const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
+  const token = request.headers.get("Authorization") ?? "";
+  const { error } = await supabase.auth.getUser(token);
+  if (error) {
+    return NextResponse.json({ status: error.message }, { status: 400 });
+  }
   const posts = await prisma.post.findMany({
     orderBy: {
       updatedAt: "desc",
@@ -20,7 +26,7 @@ export async function GET(request: NextRequest) {
     id: post.id,
     title: post.title,
     content: post.content,
-    thumbnailUrl: post.thumbnailUrl,
+    thumbnailImageKey: post.thumbnailImageKey,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     categories: post.postCategories.map((pc) => ({
@@ -33,10 +39,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const token = request.headers.get("Authorization") ?? "";
+  const { error } = await supabase.auth.getUser(token);
+  if (error) {
+    return NextResponse.json({ status: error.message }, { status: 400 });
+  }
   try {
     const body = await request.json();
 
-    const { title, content, thumbnailUrl } = body ?? {};
+    const { title, content, thumbnailImageKey } = body ?? {};
 
     if (!title || !content) {
       return NextResponse.json(
@@ -61,7 +72,7 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         content,
-        thumbnailUrl: thumbnailUrl || "",
+        thumbnailImageKey: thumbnailImageKey || "",
         postCategories:
           categoryIds.length > 0
             ? {

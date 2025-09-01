@@ -1,7 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import { supabase } from '@/utils/supabase'
+import { v4 as uuidv4 } from 'uuid'
+import { useSupabaseSession } from '../../../_hooks/useSupabaseSession'
 
 interface Category {
   id: number
@@ -11,7 +15,7 @@ interface Category {
 interface PostFormData {
   title: string
   content: string
-  thumbnailUrl: string
+  thumbnailImageKey: string
   selectedCategories: number[]
 }
 
@@ -27,7 +31,6 @@ interface PostFormProps {
 
 export default function PostForm({
   mode,
-  postId,
   initialData,
   onSubmit,
   onDelete,
@@ -35,16 +38,26 @@ export default function PostForm({
   message
 }: PostFormProps) {
   const router = useRouter()
+  const { token } = useSupabaseSession()
   const [title, setTitle] = useState(initialData?.title || '')
   const [content, setContent] = useState(initialData?.content || '')
-  const [thumbnailUrl, setThumbnailUrl] = useState(initialData?.thumbnailUrl || '')
+  const [thumbnailUrl, setThumbnailUrl] = useState(initialData?.thumbnailImageKey || '')
+  const [thumbnailImageKey, setThumbnailImageKey] = useState(initialData?.thumbnailImageKey || '')
+  const [thumbnailImageUrl, setThumbnailImageUrl] = useState<null | string>(null)
   const [selectedCategories, setSelectedCategories] = useState<number[]>(initialData?.selectedCategories || [])
   const [categories, setCategories] = useState<Category[]>([])
 
   useEffect(() => {
+    if (!token) return
+
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/admin/categories')
+        const response = await fetch('/api/admin/categories', {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: token,
+          },
+        })
         if (response.ok) {
           const data = await response.json()
           setCategories(data)
@@ -55,22 +68,86 @@ export default function PostForm({
     }
 
     fetchCategories()
-  }, [])
+  }, [token])
 
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title)
       setContent(initialData.content)
-      setThumbnailUrl(initialData.thumbnailUrl)
+      setThumbnailUrl(initialData.thumbnailImageKey)
+      setThumbnailImageKey(initialData.thumbnailImageKey)
       setSelectedCategories(initialData.selectedCategories)
     }
   }, [initialData])
+
+  useEffect(() => {
+    if (!thumbnailImageKey) return
+
+    const fetcher = async () => {
+      const {
+        data: { publicUrl },
+      } = await supabase.storage
+        .from('post_thumbnail')
+        .getPublicUrl(thumbnailImageKey)
+
+      setThumbnailImageUrl(publicUrl)
+    }
+
+    fetcher()
+  }, [thumbnailImageKey])
 
   const handleCategoryChange = (categoryId: number, checked: boolean) => {
     if (checked) {
       setSelectedCategories(prev => [...prev, categoryId])
     } else {
       setSelectedCategories(prev => prev.filter(id => id !== categoryId))
+    }
+  }
+
+  const handleImageChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    if (!event.target.files || event.target.files.length == 0) {
+      return
+    }
+
+    const file = event.target.files[0]
+    const filePath = `private/${uuidv4()}`
+
+    const { data, error } = await supabase.storage
+      .from('post_thumbnail')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      })
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    setThumbnailImageKey(data.path)
+  }
+
+  const handleImageDelete = async () => {
+    if (!thumbnailImageKey) return
+
+    try {
+      const { error } = await supabase.storage
+        .from('post_thumbnail')
+        .remove([thumbnailImageKey])
+
+      if (error) {
+        alert(error.message)
+        return
+      }
+
+      setThumbnailImageKey('')
+      setThumbnailImageUrl(null)
+      setThumbnailUrl('')
+    } catch (error) {
+      console.error('画像の削除に失敗しました:', error)
+      alert('画像の削除に失敗しました')
     }
   }
 
@@ -88,7 +165,7 @@ export default function PostForm({
     await onSubmit({
       title: title.trim(),
       content: content.trim(),
-      thumbnailUrl: thumbnailUrl.trim(),
+      thumbnailImageKey: thumbnailImageKey || thumbnailUrl.trim(),
       selectedCategories
     })
   }
@@ -149,17 +226,42 @@ export default function PostForm({
         </div>
 
         <div>
-          <label htmlFor="thumbnailUrl" className="block text-sm font-medium text-gray-700 mb-2">
-            サムネイルURL
+          <label htmlFor="thumbnailImageKey" className="block text-sm font-medium text-gray-700 mb-2">
+            サムネイル画像
           </label>
           <input
-            type="url"
-            id="thumbnailUrl"
-            value={thumbnailUrl}
-            onChange={(e) => setThumbnailUrl(e.target.value)}
+            type="file"
+            id="thumbnailImageKey"
+            onChange={handleImageChange}
+            accept="image/*"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="https://example.com/image.jpg"
           />
+          {thumbnailImageUrl && (
+            <div className="mt-2">
+              <div className="relative inline-block">
+                <Image
+                  src={thumbnailImageUrl}
+                  alt="thumbnail"
+                  width={400}
+                  height={400}
+                  className="object-cover rounded"
+                />
+                <button
+                  type="button"
+                  onClick={handleImageDelete}
+                  className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                  title="画像を削除"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                画像を変更するには新しいファイルを選択してください
+              </p>
+            </div>
+          )}
         </div>
 
         <div>
